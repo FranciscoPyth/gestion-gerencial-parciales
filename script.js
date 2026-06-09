@@ -248,9 +248,37 @@ function resetTextInputs(rootSelector) {
   });
 }
 
+// ===== Verdadero / Falso =====
+function verifyVF(rootSelector) {
+  const root = document.querySelector(rootSelector);
+  if (!root) return { total: 0, correct: 0 };
+  let total = 0, correct = 0;
+  root.querySelectorAll("tr[data-vf-answer]").forEach(row => {
+    total++;
+    const expected = row.getAttribute("data-vf-answer");
+    const checked = row.querySelector('input[type=radio]:checked');
+    row.classList.remove("ok", "bad");
+    if (checked && checked.value === expected) {
+      correct++; row.classList.add("ok");
+    } else {
+      row.classList.add("bad");
+    }
+  });
+  return { total, correct };
+}
+
+function resetVF(rootSelector) {
+  const root = document.querySelector(rootSelector);
+  if (!root) return;
+  root.querySelectorAll("tr[data-vf-answer]").forEach(row => {
+    row.classList.remove("ok", "bad");
+    row.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+  });
+}
+
 // ===== Verificar TODO el parcial =====
 function verifyExam(opts) {
-  // opts = { crosswordIds: [...], matchingIds: [...], textRoot: '#exam' }
+  // opts = { crosswordIds, matchingIds, vfRoots, textRoot }
   let total = 0, correct = 0;
   (opts.crosswordIds || []).forEach(id => {
     const r = verifyCrossword(id);
@@ -258,6 +286,10 @@ function verifyExam(opts) {
   });
   (opts.matchingIds || []).forEach(id => {
     const r = matchStates[id]?.verify() || { total: 0, correct: 0 };
+    total += r.total; correct += r.correct;
+  });
+  (opts.vfRoots || []).forEach(sel => {
+    const r = verifyVF(sel);
     total += r.total; correct += r.correct;
   });
   if (opts.textRoot) {
@@ -282,8 +314,10 @@ function verifyExam(opts) {
 function resetExam(opts) {
   (opts.crosswordIds || []).forEach(id => resetCrossword(id));
   (opts.matchingIds || []).forEach(id => matchStates[id]?.reset());
+  (opts.vfRoots || []).forEach(sel => resetVF(sel));
   if (opts.textRoot) {
     resetTextInputs(opts.textRoot);
+    document.querySelectorAll(opts.textRoot + " textarea.open-answer").forEach(t => t.value = "");
     document.querySelector(opts.textRoot).querySelectorAll(".answer-box")
       .forEach(b => b.classList.remove("show"));
     const scoreEl = document.querySelector(opts.textRoot + " .score");
